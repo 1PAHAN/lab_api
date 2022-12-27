@@ -1,6 +1,9 @@
+using ActionFilters.Filters;
+using Contracts;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -10,6 +13,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using WebApplication1.ActionFilters;
 using WebApplication1.Extensions;
 
 namespace WebApplication1
@@ -27,14 +31,31 @@ namespace WebApplication1
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddRazorPages();
+            services.ConfigureRepositoryManager();
+            services.AddControllers();
             services.ConfigureCors();
             services.ConfigureIISIntegration();
             services.ConfigureLoggerService();
+            services.ConfigureSqlContext(Configuration);
+            services.AddAutoMapper(typeof(Startup));
+            services.AddScoped<ValidationFilterAttribute>();
+            services.AddControllers(config =>
+            {
+                config.RespectBrowserAcceptHeader = true;
+                config.ReturnHttpNotAcceptable = true;
+                //config.Filters.Add(new ActionFilterExample());
+            })
+                .AddNewtonsoftJson()
+                .AddXmlDataContractSerializerFormatters()
+                .AddCustomCSVFormatter();
+            services.Configure<ApiBehaviorOptions>(options =>
+            {
+                options.SuppressModelStateInvalidFilter = true;
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerManager logger)
         {
             if (env.IsDevelopment())
             {
@@ -45,6 +66,7 @@ namespace WebApplication1
                 app.UseExceptionHandler("/Error");
             }
 
+            app.ConfigureExceptionHandler(logger);
             app.UseStaticFiles();
             app.UseCors("CorsPolicy");
             app.UseForwardedHeaders(new ForwardedHeadersOptions
