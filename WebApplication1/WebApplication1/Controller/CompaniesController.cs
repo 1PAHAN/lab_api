@@ -2,6 +2,7 @@
 using Contracts;
 using Entities.DataTransferObjects;
 using Entities.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
@@ -18,6 +19,7 @@ using WebApplication1.ModelBinders;
 
 namespace WebApplication1.Controller
 {
+    [ApiVersion("1.0")]
     [Route("api/companies")]
     [ApiController]
     public class CompaniesController : ControllerBase
@@ -34,6 +36,8 @@ namespace WebApplication1.Controller
         }
 
         [HttpGet]
+        [HttpHead]
+        [HttpGet(Name = "GetCompanies"), Authorize (Roles = "Manager")]
         public async Task<IActionResult> GetCompanies()
         {
             var companies = await _repository.Company.GetAllCompaniesAsync(trackChanges: false);
@@ -46,6 +50,7 @@ namespace WebApplication1.Controller
         }
 
         [HttpGet("{id}", Name = "CompanyById")]
+        [HttpHead]
         public async Task<IActionResult> GetCompanyById(Guid id)
         {
             var company = await _repository.Company.GetCompanyAsync(id, false);
@@ -58,6 +63,7 @@ namespace WebApplication1.Controller
         }
 
         [HttpGet("collection/({ids})", Name = "CompanyCollection")]
+        [HttpHead]
         public async Task<IActionResult> GetCompanyCollection(
             [ModelBinder(BinderType = typeof(ArrayModelBinder))] IEnumerable<Guid> ids)
         {
@@ -79,6 +85,7 @@ namespace WebApplication1.Controller
         }
 
         [HttpPost]
+        [HttpHead]
         [ServiceFilter(typeof(ValidationFilterAttribute))]
         public async Task<IActionResult> CreateCompany([FromBody] CompanyForCreationDto company)
         {
@@ -92,6 +99,7 @@ namespace WebApplication1.Controller
         }
 
         [HttpPost("collection")]
+        [HttpHead]
         public async Task<IActionResult> CreateCompanyCollection(
             [FromBody] IEnumerable<CompanyForCreationDto> companyCollection)
         {
@@ -116,6 +124,7 @@ namespace WebApplication1.Controller
         }
 
         [HttpDelete("{id}")]
+        [HttpHead]
         public async Task<IActionResult> DeleteCompany(Guid id)
         {
             var company = await _repository.Company.GetCompanyAsync(id, trackChanges: false);
@@ -131,6 +140,7 @@ namespace WebApplication1.Controller
         }
 
         [HttpPut("{id}")]
+        [HttpHead]
         [ServiceFilter(typeof(ValidationFilterAttribute))]
         public async Task<IActionResult> UpdateCompany(Guid id, [FromBody] CompanyForUpdateDto company)
         {
@@ -147,6 +157,7 @@ namespace WebApplication1.Controller
         }
 
         [HttpPatch("{id}")]
+        [HttpHead]
         public IActionResult PartiallyUpdateCompany(Guid id,
             [FromBody] JsonPatchDocument<CompanyForUpdateDto> patchDoc)
         {
@@ -174,6 +185,13 @@ namespace WebApplication1.Controller
             _mapper.Map(companyToPath, company);
             _repository.Save();
             return NoContent();
+        }
+
+        [HttpOptions]
+        public IActionResult GetCompaniesOptions()
+        {
+            Response.Headers.Add("Allow", "GET, OPTIONS, POST");
+            return Ok();
         }
     }
 }
